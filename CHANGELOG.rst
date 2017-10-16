@@ -1,10 +1,11 @@
 Changelog
 =========
 
-Current
--------
+1.0.0
+-----
 
-- nothing yet
+- Django 1.8--1.11 support
+- Python 2.7--3.6 support
 
 
 0.3 (2013-03-03)

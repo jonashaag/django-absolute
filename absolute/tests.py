@@ -9,7 +9,6 @@ from django.template import Context, Template, RequestContext
 from django.test import TestCase
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
-from django.conf.urls import patterns, url
 
 from absolute.context_processors import absolute
 
@@ -39,7 +38,7 @@ class AbsoluteContextProcessorTest(TestCase):
         self.assertEqual(context['SITE_ROOT'], 'http://%s' % domain)
         self.assertEqual(context['SITE_ROOT_URL'], 'http://%s/' % domain)
 
-    @override_settings(INSTALLED_APPS=('absolute'))
+    @override_settings(INSTALLED_APPS=('absolute',))
     def test_context_processors_site_not_installed(self):
         request = self.factory.get('/')
         context = absolute(request)
@@ -49,8 +48,6 @@ class AbsoluteContextProcessorTest(TestCase):
 
 
 class AbsoluteTestMixin(object):
-    urls = patterns('', url(r'^test$', 'test', name='test_url'))
-
     def setUp(self):
         self.factory = RequestFactory()
 
