@@ -6,6 +6,9 @@ Changelog
 
 - Django 1.8--1.11 support
 - Python 2.7--3.6 support
+- Dropped ``absolute_future`` template tag
+- Added ``{% site "my_view" site my_site_obj %}`` syntax.
+- Added ``ABSOLUTE_URL_PROTOCOL`` setting.
 
 
 0.3 (2013-03-03)

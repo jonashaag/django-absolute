@@ -2,6 +2,8 @@
 from django.contrib.sites.models import Site
 from django.template import Library
 from django.template.defaulttags import URLNode, url
+from django.template.base import Token
+from django.conf import settings
 
 register = Library()
 
@@ -37,17 +39,29 @@ def absolute(parser, token):
 
 
 class SiteUrlNode(URLNode):
+    def __init__(self, site, *args, **kwargs):
+        self.site = site
+        super().__init__(*args, **kwargs)
+
     def render(self, context):
         asvar, self.asvar = self.asvar, None  # Needed to get a return value from super
         path = super(SiteUrlNode, self).render(context)
         self.asvar = asvar
-        domain = Site.objects.get_current().domain
-        if 'request' in context:
-            request = context['request']
-            protocol = 'https' if request.is_secure() else 'http'
+
+        if self.site:
+            site = self.site.resolve(context)
+            assert isinstance(site, Site)
         else:
-            protocol = 'http'
-        site_url = "%s://%s%s" % (protocol, domain, path)
+            site = Site.objects.get_current()
+
+        protocol = getattr(settings, 'ABSOLUTE_URL_PROTOCOL', None)
+        if protocol is None:
+            if 'request' in context:
+                request = context['request']
+                protocol = 'https' if request.is_secure() else 'http'
+            else:
+                protocol = 'http'
+        site_url = "%s://%s%s" % (protocol, site.domain, path)
         if asvar:
             context[asvar] = site_url
             return ''
@@ -60,10 +74,22 @@ def site(parser, token):
     '''
     Returns a full absolute URL based on the current site.
 
-    This template tag takes exactly the same paramters as url template tag.
+    This template tag takes exactly the same paramters as url template tag,
+    plus an optional "site" argument to force usage of a given Site object::
+
+        {% site "my_view" site my_site_obj %}
     '''
+    bits = token.split_contents()
+    if len(bits) > 2 and bits[2] == 'site':
+        site = parser.compile_filter(bits[3])
+        token = Token(token.token_type, ' '.join(bits[:2] + bits[4:]), token.position, token.lineno)
+    else:
+        site = None
+
     node = url(parser, token)
+
     return SiteUrlNode(
+        site=site,
         view_name=node.view_name,
         args=node.args,
         kwargs=node.kwargs,

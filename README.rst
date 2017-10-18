@@ -28,17 +28,8 @@ Add ``absolute`` to your ``settings.INSTALLED_APPS``.
 Context processor
 -----------------
 
-Add ``absolute.context_processors.absolute`` to your ``settings.TEMPLATE_CONTEXT_PROCESSORS``.
-Django Absolute context processor depends on request context processor:
-
-.. code-block:: python
-
-    from django.conf import global_settings
-
-    TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
-        'django.core.context_processors.request',
-        'absolute.context_processors.absolute',
-    )
+Add ``absolute.context_processors.absolute`` to your template context processors.
+Note that this requires the ``request`` context processor shipped with Django.
 
 Then you can access the following variables in your templates:
 
@@ -62,44 +53,29 @@ To use theses template tags, you need to load the ``absolute`` template tag libr
 
     {% load absolute %}
 
-    {% url index %}
-    {% absolute index %}
-    {% site index %}
+    {% url "my_view" %}
+    {% absolute "my_view" %}
+    {% site "my_view" %}
 
 These template tags have exactly the same syntax as ``url``, including the "`as`" syntax:
 
 .. code-block:: html+django
 
-    {% absolute index as the_url %}
+    {% absolute "my_view" as the_url %}
     {{ the_url }}
 
-
-If you use Django 1.5, you need to use the "new-style" url syntax (quoted parameters):
+You may optionally pass a custom ``site`` to the ``{% site %}`` templatetag to
+always make it used that given site:
 
 .. code-block:: html+django
-
-    {% load absolute %}
-
-    {% url "index" %}
-    {% absolute "index" %}
-    {% site "index" %}
-
-    {% absolute "index" as the_url %}
-    {{ the_url }}
+  
+    {% site "my_view" site my_site_obj %}
 
 
-If you want to match the "new-style" syntax in Django < 1.5 you need to load ``absolute_future`` instead (same behavior as ``{% load url from future %}``).
+Settings
+--------
+``{% site "my_view" %}`` guesses the from the current request if HTTP or HTTPS
+should be used. To force a protocol (for example if using without a request),
+use the ``ABSOLUTE_URL_PROTOCOL`` setting::
 
-.. code-block:: html+django
-
-    {% load url from future %}
-    {% load absolute_future %}
-
-    {% url "index" %}
-    {% absolute "index" %}
-    {% site "index" %}
-
-    {% absolute "index" as the_url %}
-    {{ the_url }}
-
-For more informations, see the `Django 1.5 release notes <https://docs.djangoproject.com/en/dev/releases/1.5/>`_.
+  ABSOLUTE_URL_PROTOCOL = 'https'

@@ -47,75 +47,58 @@ class AbsoluteContextProcessorTest(TestCase):
         self.assertNotIn('SITE_ROOT_URL', context)
 
 
-class AbsoluteTestMixin(object):
+class AbsoluteTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
 
     def test_template_tags(self):
-        request = self.factory.get(reverse('test_url'))
-        t = Template('''%(load)s
+        t = Template('''{% load absolute %}
             {
-                "absolute": "{%% absolute %(url)s %%}",
-                "site": "{%% site %(url)s %%}"
+                "absolute": "{% absolute "test_url" %}",
+                "site": "{% site "test_url" %}"
             }
-            ''' % self.params)
-
+            ''')
+        request = self.factory.get(reverse('test_url'))
         rendered = t.render(RequestContext(request))
-        domain = Site.objects.get_current().domain
         data = json.loads(rendered)
 
+        domain = Site.objects.get_current().domain
         self.assertEqual(data['absolute'], 'http://testserver/test')
         self.assertEqual(data['site'], 'http://%s/test' % domain)
 
     def test_template_tag_as_syntax(self):
-        request = self.factory.get(reverse('test_url'))
-        t = Template('''%(load)s
-            {%% absolute %(url)s as absolute_url %%}
-            {%% site %(url)s as site_url %%}
+        t = Template('''{% load absolute %}
+            {% absolute "test_url" as absolute_url %}
+            {% site "test_url" as site_url %}
             {
                 "absolute": "{{ absolute_url }}",
                 "site": "{{ site_url }}"
             }
-            ''' % (self.params)
+            '''
         )
+        request = self.factory.get(reverse('test_url'))
         rendered = t.render(RequestContext(request))
-        domain = Site.objects.get_current().domain
         data = json.loads(rendered)
 
+        domain = Site.objects.get_current().domain
         self.assertEqual(data['absolute'], 'http://testserver/test')
         self.assertEqual(data['site'], 'http://%s/test' % domain)
 
     def test_site_fallback(self):
         '''Should fallback on http protocol if request is missing'''
-        t = Template('''%(load)s
-            {
-                "site": "{%% site %(url)s %%}"
-            }
-            ''' % self.params)
+        t = Template('{% load absolute %}{% site "test_url" %}')
         rendered = t.render(Context())
         domain = Site.objects.get_current().domain
-        data = json.loads(rendered)
-        self.assertEqual(data['site'], 'http://%s/test' % domain)
+        self.assertEqual(rendered, 'http://%s/test' % domain)
 
+    def test_site_override(self):
+        foo_site = Site.objects.create(domain='foo.com', name='foo.com')
+        t = Template('{% load absolute %}{% site "test_url" site my_site %}')
+        rendered = t.render(Context({'my_site': foo_site}))
+        self.assertEqual(rendered, 'http://foo.com/test')
 
-@skipIf(VERSION >= (1, 5), "Syntax not supported by Django 1.5+")
-class AbsoluteOldTest(AbsoluteTestMixin, TestCase):
-    params = {
-        'load': '{% load absolute %}',
-        'url': 'test_url'
-    }
-
-
-@skipIf(VERSION < (1, 5), "Syntax only supported by Django 1.5+")
-class AbsoluteNewTest(AbsoluteTestMixin, TestCase):
-    params = {
-        'load': '{% load absolute %}',
-        'url': '"test_url"'
-    }
-
-
-class AbsoluteFutureTest(AbsoluteTestMixin, TestCase):
-    params = {
-        'load': '{% load absolute_future %}',
-        'url': '"test_url"'
-    }
+    @override_settings(ABSOLUTE_URL_PROTOCOL='xxx')
+    def test_site_protocol(self):
+        t = Template('{% load absolute %}{% site "test_url"  %}')
+        rendered = t.render(Context())
+        self.assertEqual(rendered, 'xxx://example.com/test')
