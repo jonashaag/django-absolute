@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from django.contrib.sites.models import Site
+from django.contrib.sites.shortcuts import get_current_site
 from django.template import Library
 from django.template.defaulttags import URLNode, url
 from django.template.base import Token
@@ -48,16 +48,17 @@ class SiteUrlNode(URLNode):
         path = super(SiteUrlNode, self).render(context)
         self.asvar = asvar
 
+        request = context.get('request')
+
         if self.site:
             site = self.site.resolve(context)
-            assert isinstance(site, Site)
         else:
-            site = Site.objects.get_current()
+            site = get_current_site(request)
+        assert hasattr(site, 'domain')
 
         protocol = getattr(settings, 'ABSOLUTE_URL_PROTOCOL', None)
         if protocol is None:
-            if 'request' in context:
-                request = context['request']
+            if request is not None:
                 protocol = 'https' if request.is_secure() else 'http'
             else:
                 protocol = 'http'

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from django.contrib.sites.models import Site
+from django.contrib.sites.shortcuts import get_current_site
 from django.conf import settings
 
 
 def get_site_url(request, slash=False):
-    domain = Site.objects.get_current().domain
+    domain = get_current_site(request).domain
     protocol = 'https' if request.is_secure() else 'http'
     root = "%s://%s" % (protocol, domain)
     if slash:

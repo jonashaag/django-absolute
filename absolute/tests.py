@@ -47,19 +47,31 @@ class AbsoluteContextProcessorTest(TestCase):
         self.assertNotIn('SITE_ROOT_URL', context)
 
 
+TEMPLATE1 = Template('''{% load absolute %}
+    {
+        "absolute": "{% absolute "test_url" %}",
+        "site": "{% site "test_url" %}"
+    }
+    '''
+)
+TEMPLATE2 = Template('''{% load absolute %}
+    {% absolute "test_url" as absolute_url %}
+    {% site "test_url" as site_url %}
+    {
+        "absolute": "{{ absolute_url }}",
+        "site": "{{ site_url }}"
+    }
+    '''
+)
+
+
 class AbsoluteTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
 
     def test_template_tags(self):
-        t = Template('''{% load absolute %}
-            {
-                "absolute": "{% absolute "test_url" %}",
-                "site": "{% site "test_url" %}"
-            }
-            ''')
         request = self.factory.get(reverse('test_url'))
-        rendered = t.render(RequestContext(request))
+        rendered = TEMPLATE1.render(RequestContext(request))
         data = json.loads(rendered)
 
         domain = Site.objects.get_current().domain
@@ -67,17 +79,8 @@ class AbsoluteTest(TestCase):
         self.assertEqual(data['site'], 'http://%s/test' % domain)
 
     def test_template_tag_as_syntax(self):
-        t = Template('''{% load absolute %}
-            {% absolute "test_url" as absolute_url %}
-            {% site "test_url" as site_url %}
-            {
-                "absolute": "{{ absolute_url }}",
-                "site": "{{ site_url }}"
-            }
-            '''
-        )
         request = self.factory.get(reverse('test_url'))
-        rendered = t.render(RequestContext(request))
+        rendered = TEMPLATE2.render(RequestContext(request))
         data = json.loads(rendered)
 
         domain = Site.objects.get_current().domain
@@ -102,3 +105,13 @@ class AbsoluteTest(TestCase):
         t = Template('{% load absolute %}{% site "test_url"  %}')
         rendered = t.render(Context())
         self.assertEqual(rendered, 'xxx://example.com/test')
+
+    @override_settings(INSTALLED_APPS=('absolute',), ALLOWED_HOSTS=('bar.com',))
+    def test_template_tags_without_contrib_sites(self):
+        self.factory.defaults['HTTP_HOST'] = 'bar.com'
+        request = self.factory.get(reverse('test_url'))
+        rendered = TEMPLATE1.render(RequestContext(request))
+        data = json.loads(rendered)
+
+        self.assertEqual(data['absolute'], 'http://bar.com/test')
+        self.assertEqual(data['site'], 'http://bar.com/test')
