@@ -65,14 +65,18 @@ TEMPLATE2 = Template('''{% load absolute %}
 )
 
 
+def render_json_template(template, context):
+    rendered = TEMPLATE1.render(context)
+    return json.loads(rendered)
+
+
 class AbsoluteTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
 
     def test_template_tags(self):
         request = self.factory.get(reverse('test_url'))
-        rendered = TEMPLATE1.render(RequestContext(request))
-        data = json.loads(rendered)
+        data = render_json_template(TEMPLATE1, RequestContext(request))
 
         domain = Site.objects.get_current().domain
         self.assertEqual(data['absolute'], 'http://testserver/test')
@@ -80,8 +84,7 @@ class AbsoluteTest(TestCase):
 
     def test_template_tag_as_syntax(self):
         request = self.factory.get(reverse('test_url'))
-        rendered = TEMPLATE2.render(RequestContext(request))
-        data = json.loads(rendered)
+        data = render_json_template(TEMPLATE2, RequestContext(request))
 
         domain = Site.objects.get_current().domain
         self.assertEqual(data['absolute'], 'http://testserver/test')
@@ -110,8 +113,7 @@ class AbsoluteTest(TestCase):
     def test_template_tags_without_contrib_sites(self):
         self.factory.defaults['HTTP_HOST'] = 'bar.com'
         request = self.factory.get(reverse('test_url'))
-        rendered = TEMPLATE1.render(RequestContext(request))
-        data = json.loads(rendered)
+        data = render_json_template(TEMPLATE1, RequestContext(request))
 
         self.assertEqual(data['absolute'], 'http://bar.com/test')
         self.assertEqual(data['site'], 'http://bar.com/test')
