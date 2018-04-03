@@ -69,7 +69,7 @@ always make it used that given site:
 
 .. code-block:: html+django
   
-    {% site "my_view" site my_site_obj %}
+    {% site "my_view" site my_site_obj ...url args... %}
 
 
 Settings
